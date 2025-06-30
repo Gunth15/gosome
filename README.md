@@ -29,7 +29,8 @@ Optional dependencies include...
 - [sqlc]()
 - [goose](https://github.com/pressly/goose)
 - [templ](https://github.com/a-h/templ)
-  I would also like to take time to appreciate [bubble tea](https://github.com/charmbracelet/bubbletea)
+
+I would also like to take time to appreciate [bubble tea](https://github.com/charmbracelet/bubbletea)
 
 ## Future possible additions
 
