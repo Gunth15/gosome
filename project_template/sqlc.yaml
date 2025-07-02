@@ -1,0 +1,10 @@
+version: "2"
+sql:
+  #default engine is sqlite, but you can change it to whatever you like
+  - engine: "sqlite"
+    queries: "./internal/db/queries/*"
+    schema: "./internal/db/schemas/*"
+    gen:
+      go:
+        package: db
+        out: "./internal/db"

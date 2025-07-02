@@ -1,0 +1,74 @@
+{
+  "options": [
+    {
+      "opt-name": "database",
+      "desc": "installs sqlc and goose. Also creates an internal database directory with sub-directories for migrations, queries, and schemas.",
+      "file": "internal/db",
+      "deps": {
+        "packages": [
+          "github.com/mattn/go-sqlite3"
+        ],
+        "tools": [
+          "github.com/pressly/goose/v3/cmd/goose@latest",
+          "github.com/sqlc-dev/sqlc/cmd/sqlc@latest"
+        ]
+      }
+    },
+    {
+      "opt-name": "middlware",
+      "desc": "basic middleware library to get you started",
+      "file": "./internal/middlware",
+      "deps": {
+        "packages": [],
+        "tools": []
+      }
+    },
+    {
+      "opt-name": "logger",
+      "desc": "basic logger middlware to get you started",
+      "file": "./internal/logger",
+      "deps": {
+        "packages": [],
+        "tools": []
+      }
+    },
+    {
+      "opt-name": "web data",
+      "desc": "directory for website related data",
+      "file": "./web",
+      "deps": {
+        "packages": [],
+        "tools": []
+      }
+    },
+    {
+      "opt-name": "templating",
+      "desc": "Installs templ for templating and creates a internal directory for managing them",
+      "file": "./internal/templates",
+      "deps": {
+        "packages": [],
+        "tools": [
+          "github.com/a-h/templ/cmd/templ@latest"
+        ]
+      }
+    },
+    {
+      "opt-name": "test",
+      "desc": "Directory for integrations testing",
+      "file": "./test",
+      "deps": {
+        "packages": [],
+        "tools": []
+      }
+    },
+    {
+      "opt-name": "pkg",
+      "desc": "Directory for adding packages other devlopers can use",
+      "file": "./pkg",
+      "deps": {
+        "packages": [],
+        "tools": []
+      }
+    }
+  ]
+}
