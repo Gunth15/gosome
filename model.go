@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -128,7 +127,7 @@ func (m Model) StartInstall() (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// DownloadPkg downlad dependencies
+// DownloadPkgs downlads dependencies
 func DownloadPkgs(project_dir string, deps ...string) tea.Msg {
 	cmd := exec.Command("go", append([]string{"get"}, deps...)...)
 	cmd.Dir = project_dir
@@ -139,9 +138,9 @@ func DownloadPkgs(project_dir string, deps ...string) tea.Msg {
 	return PkgMsg{fmt.Sprintf("Packages Installed: %s", deps)}
 }
 
-func DownloadTools(project_dir string, deps ...string) tea.Msg {
+func DownloadTools(projectDir string, deps ...string) tea.Msg {
 	cmd := exec.Command("go", append([]string{"get", "--tool"}, deps...)...)
-	cmd.Dir = project_dir
+	cmd.Dir = projectDir
 	err := cmd.Run()
 	if err != nil {
 		return ErrorMsg{fmt.Errorf("could not install tool %s", err)}
@@ -150,35 +149,65 @@ func DownloadTools(project_dir string, deps ...string) tea.Msg {
 }
 
 // CopyFromTemplate copys a file to the specified directory form the template
-func CopyFromTemplate(projectdir string, filepaths ...string) tea.Msg {
-	err := fs.WalkDir(projectTemplate, ".", func(path string, d fs.DirEntry, err error) error {
-		// get path after the project_template directory
-		split := strings.SplitN(path, "/", 2)
+func CopyFromTemplate(projectDir string, filepaths ...string) tea.Msg {
+	for _, filepath := range filepaths {
 
-		if split[0] == filepath {
-			///Read contents of original file
-			file, err := projectTemplate.Open(path)
-			if err != nil {
-				return fmt.Errorf("could not open %s", filepath)
-			}
-			var buff []byte
-			_, err = file.Read(buff)
-			if err != nil {
-				return fmt.Errorf("could not read contents of template %s", filepath)
-			}
-			file.Close()
-			///
-			///
+		info, err := fs.Stat(ProjectTemplate, filepath)
+		if err != nil {
+			return ErrorMsg{err}
+		}
 
-			err = os.WriteFile(projectdir+"/"+filepath, buff, 0755)
+		if info.IsDir() {
+			err := copydirectory(projectDir, filepath)
 			if err != nil {
-				return fmt.Errorf("could not create new file %s", filepath)
+				return ErrorMsg{err}
+			}
+		} else {
+			if err = copyToProject(projectDir, filepath); err != nil {
+				return err
 			}
 		}
-		return nil
-	})
-	if err != nil {
-		return ErrorMsg{err}
 	}
-	return TemplateMsg{filepath}
+	return TemplateMsg{fmt.Sprintf("All files downloaded %s", filepaths)}
+}
+
+func copydirectory(projectDir string, filepath string) error {
+	err := os.Mkdir(projectDir+filepath, 0755)
+	if err != nil {
+		return err
+	}
+
+	dirs, err := ProjectTemplate.ReadDir(filepath)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range dirs {
+		fullPath := fmt.Sprintf("%s/%s", filepath, entry.Name())
+		if entry.IsDir() {
+			err := copydirectory(projectDir, fullPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			if err = copyToProject(projectDir, fullPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func copyToProject(projectDir string, projectPath string) error {
+	buff, err := ProjectTemplate.ReadFile(projectPath)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("%s/%s", projectDir, projectPath)
+	if err = os.WriteFile(path, buff, 0755); err != nil {
+		return err
+	}
+
+	return nil
 }

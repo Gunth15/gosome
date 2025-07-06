@@ -9,7 +9,7 @@ import (
 )
 
 //go:embed project_template
-var projectTemplate embed.FS
+var ProjectTemplate embed.FS
 
 //go:embed config.json
 var config []byte
