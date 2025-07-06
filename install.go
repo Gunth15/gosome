@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -24,12 +23,11 @@ const (
 )
 
 type Install struct {
-	tools    map[ToolMsg]bool
-	pkg      map[PkgMsg]bool
-	template map[TemplateMsg]bool
-	attempt  string
-	spinner  spinner.Model
-	state    InstallState
+	// downloads 0=tools 1=pkg 2=templates
+	downloads []bool
+	attempt   string
+	spinner   spinner.Model
+	state     InstallState
 }
 
 func (m Model) updateInstallation(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -41,62 +39,33 @@ func (m Model) updateInstallation(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Install.state = Success
 		m.Install.attempt = msg.string
 	case PkgMsg:
-		m.Install.pkg[msg] = true
+		m.Install.downloads[1] = true
 	case ToolMsg:
-		m.Install.tools[msg] = true
+		m.Install.downloads[0] = true
 	case TemplateMsg:
-		m.Install.template[msg] = true
+		m.Install.downloads[2] = true
 	}
 	return m, nil
-}
-
-func renderToolMap(items map[ToolMsg]bool, spin spinner.Model) string {
-	var b strings.Builder
-	for k, done := range items {
-		status := " " + spin.View()
-		if done {
-			status = " ✅"
-		}
-		b.WriteString(fmt.Sprintf("  %s %s\n", status, k.string))
-	}
-	return b.String()
-}
-
-func renderPkgMap(items map[PkgMsg]bool, spin spinner.Model) string {
-	var b strings.Builder
-	for k, done := range items {
-		status := " " + spin.View()
-		if done {
-			status = " ✅"
-		}
-		b.WriteString(fmt.Sprintf("  %s %s\n", status, k.string))
-	}
-	return b.String()
-}
-
-func renderTemplateMap(items map[TemplateMsg]bool, spin spinner.Model) string {
-	var b strings.Builder
-	for k, done := range items {
-		status := " " + spin.View()
-		if done {
-			status = " ✅"
-		}
-		b.WriteString(fmt.Sprintf("  %s %s\n", status, k.string))
-	}
-	return b.String()
 }
 
 func (m Model) viewInstallation() string {
 	var b strings.Builder
 
-	b.WriteString("🛠 Installing tools:\n")
-	b.WriteString(renderToolMap(m.Install.tools, m.Install.spinner))
+	statIndicator := make([]string, 3)
+	for i, finished := range m.Install.downloads {
+		if finished {
+			statIndicator[i] = "✅\n"
+		} else {
+			statIndicator[i] = m.Install.spinner.View() + "\n"
+		}
+	}
 
+	b.WriteString("🛠 Installing tools")
+	b.WriteString(statIndicator[0])
 	b.WriteString("\n📦 Installing packages:\n")
-	b.WriteString(renderPkgMap(m.Install.pkg, m.Install.spinner))
-
+	b.WriteString(statIndicator[1])
 	b.WriteString("\n📐 Applying templates:\n")
-	b.WriteString(renderTemplateMap(m.Install.template, m.Install.spinner))
+	b.WriteString(statIndicator[2])
 
 	b.WriteString("\n\nAttempt: " + m.Install.attempt)
 	return b.String()

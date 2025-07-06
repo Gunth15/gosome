@@ -10,8 +10,8 @@ import (
 
 var (
 	CheckListStyle = lipgloss.NewStyle().AlignHorizontal(lipgloss.Left)
-	TitleStyle     = lipgloss.NewStyle().Bold(true)
-	SelectedStyle  = lipgloss.NewStyle().BorderLeftBackground(lipgloss.Color("#99907d"))
+	TitleStyle     = lipgloss.NewStyle().Bold(true).Underline(true)
+	SelectedStyle  = lipgloss.NewStyle().BorderStyle(lipgloss.RoundedBorder()).BorderLeft(true).BorderBackground(lipgloss.Color("#99907d"))
 )
 
 type CheckList struct {
@@ -19,8 +19,9 @@ type CheckList struct {
 	options  []Option
 	selected []bool
 	title    string
-	width    int
+	pagesize int
 	height   int
+	width    int
 }
 
 // Sub initialization functions for each scene
@@ -52,6 +53,7 @@ func (m Model) updateCheckList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.Checklist.height = msg.Height
 		m.Checklist.width = msg.Width
+		m.Checklist.pagesize = max(msg.Height-4, 1)
 	}
 	return m, nil
 }
@@ -62,27 +64,28 @@ func (m Model) viewCheckList() string {
 		panic("No options set in config")
 	}
 
-	elementheight := m.Checklist.height / optslen
-
-	pagesize := (elementheight * optslen) / m.Checklist.height
-	page := pagesize % m.Checklist.cursor
+	page := m.Checklist.cursor / m.Checklist.pagesize
+	start := page * m.Checklist.pagesize
+	end := min(start+m.Checklist.pagesize, len(m.Checklist.options))
 
 	var builder strings.Builder
 
 	builder.WriteString(TitleStyle.Render(m.Checklist.title))
 	builder.WriteByte('\n')
 
-	for i, selected := range m.Checklist.selected[page : pagesize+page] {
-		element := lipgloss.NewStyle().Height(elementheight)
+	for i, selected := range m.Checklist.selected[start:end] {
+		cursor_pos := start + i
+		element := lipgloss.NewStyle().
+			Width(m.Checklist.width)
 
 		var optbuilder strings.Builder
-		option := m.Checklist.options[i]
+		option := m.Checklist.options[cursor_pos]
 
-		optbuilder.WriteString(option.Title())
+		optbuilder.WriteString(TitleStyle.Render(option.Title()))
 		optbuilder.WriteByte('\n')
 		optbuilder.WriteString(option.Description())
 
-		if m.Checklist.cursor == i {
+		if m.Checklist.cursor == cursor_pos {
 			element = element.Inherit(PrimaryColor)
 		}
 
@@ -95,8 +98,13 @@ func (m Model) viewCheckList() string {
 	}
 
 	builder.WriteByte('\n')
-	builder.WriteString("[ Done ]")
-	builder.WriteString(lipgloss.NewStyle().AlignVertical(lipgloss.Bottom).AlignHorizontal(lipgloss.Right).Render(strconv.Itoa(page + 1)))
 
-	return CheckListStyle.Render(builder.String())
+	done := "[ Done ]"
+	if m.Checklist.cursor == len(m.Checklist.options) {
+		done = SecondaryColor.Render(done)
+	}
+	builder.WriteString(done)
+	builder.WriteString(lipgloss.NewStyle().Width(m.Checklist.width - 10).Align(lipgloss.Right).Render(strconv.Itoa(page + 1)))
+
+	return CheckListStyle.Height(m.Checklist.height).Render(builder.String())
 }

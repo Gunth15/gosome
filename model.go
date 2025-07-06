@@ -35,8 +35,12 @@ func initModel(options []Option) Model {
 			options:  options,
 			selected: make([]bool, len(options)),
 			cursor:   0,
-			width:    1,
+			pagesize: 1,
 			height:   1,
+		},
+		Install: Install{
+			downloads: make([]bool, 3),
+			state:     Installing,
 		},
 	}
 }
@@ -50,7 +54,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "ctr-c":
+		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
 	}
@@ -78,84 +82,80 @@ func (m Model) View() string {
 }
 
 func (m Model) StartInstall() (tea.Model, tea.Cmd) {
-	install := &m.Install
+	dir := "testing"
+	module := "testing"
+
 	cmds := make([]tea.Cmd, 0)
 
 	// create new project directory and go mod
-	err := os.Mkdir("testing", 0664)
+	err := os.Mkdir(dir, 0755)
 	if err != nil {
 		m.Install.state = Error
-		return m, func() tea.Msg { return ErrorMsg{fmt.Errorf("could not create project directory %s", "testing")} }
+		return m, func() tea.Msg {
+			return ErrorMsg{fmt.Errorf("could not create project directory %s, may already exist", dir)}
+		}
 	}
 
 	// TODO: Update this to take a project name
-	init := exec.Command("go", "mod", "init", "test")
-	init.Dir = "./testing"
+	init := exec.Command("go", "mod", "init", module)
+	init.Dir = dir
 	err = init.Run()
 	if err != nil {
 		m.Install.state = Error
-		return m, func() tea.Msg { return ErrorMsg{fmt.Errorf("could not initialize go module %s", "test")} }
+		return m, func() tea.Msg { return ErrorMsg{fmt.Errorf("could not initialize go module %s", module)} }
 	}
 
+	pkgs := make([]string, 0)
+	tools := make([]string, 0)
+	files := make([]string, 0)
 	for i, selected := range m.Checklist.selected {
 		if selected {
 			// packages, and tool dependencies are downloaded and the realted template is copied to the new project
 			option := &m.Checklist.options[i]
-			pkgs := option.Deps.Package
-			tools := option.Deps.Tools
 
-			// copy from template
-			cmds = append(cmds, func() tea.Msg {
-				// TODO: Update this to take a project name
-				// TODO: Update model to take input for project name
-				return CopyFromTemplate("testing", option.File)
-			})
+			pkgs = append(pkgs, option.Deps.Package...)
+			tools = append(tools, option.Deps.Tools...)
+			files = append(files, option.File)
 
-			// install all packages
-			for _, pkg := range pkgs {
-				cmds = append(cmds, func() tea.Msg {
-					return DownloadPkg(pkg)
-				})
-				install.pkg[PkgMsg{pkg}] = false
-			}
-
-			// install all tools
-			for _, tool := range tools {
-				cmds = append(cmds, func() tea.Msg {
-					return DownloadTool(tool)
-				})
-				install.tools[ToolMsg{tool}] = false
-			}
 		}
 	}
+
 	cmds = append(cmds, m.Install.spinner.Tick)
+	cmds = append(cmds, func() tea.Msg { return DownloadPkgs(dir, pkgs...) })
+	cmds = append(cmds, func() tea.Msg { return DownloadTools(dir, tools...) })
+	cmds = append(cmds, func() tea.Msg { return CopyFromTemplate(dir, files...) })
+
 	return m, tea.Batch(cmds...)
 }
 
 // DownloadPkg downlad dependencies
-func DownloadPkg(dep string) tea.Msg {
-	err := exec.Command("go", "get", dep).Run()
+func DownloadPkgs(project_dir string, deps ...string) tea.Msg {
+	cmd := exec.Command("go", append([]string{"get"}, deps...)...)
+	cmd.Dir = project_dir
+	err := cmd.Run()
 	if err != nil {
-		return ErrorMsg{fmt.Errorf("could not install package %s", dep)}
+		return ErrorMsg{fmt.Errorf("could not install all packages %s", err)}
 	}
-	return PkgMsg{dep}
+	return PkgMsg{fmt.Sprintf("Packages Installed: %s", deps)}
 }
 
-func DownloadTool(dep string) tea.Msg {
-	err := exec.Command("go", "get", "--tool", dep).Run()
+func DownloadTools(project_dir string, deps ...string) tea.Msg {
+	cmd := exec.Command("go", append([]string{"get", "--tool"}, deps...)...)
+	cmd.Dir = project_dir
+	err := cmd.Run()
 	if err != nil {
-		return ErrorMsg{fmt.Errorf("could not install tool %s", dep)}
+		return ErrorMsg{fmt.Errorf("could not install tool %s", err)}
 	}
-	return ToolMsg{dep}
+	return ToolMsg{fmt.Sprintf("Tools installed: %s", deps)}
 }
 
 // CopyFromTemplate copys a file to the specified directory form the template
-func CopyFromTemplate(projectdir string, filepath string) tea.Msg {
+func CopyFromTemplate(projectdir string, filepaths ...string) tea.Msg {
 	err := fs.WalkDir(projectTemplate, ".", func(path string, d fs.DirEntry, err error) error {
 		// get path after the project_template directory
-		split := strings.SplitN(path, "/", 1)
+		split := strings.SplitN(path, "/", 2)
 
-		if split[1] == filepath {
+		if split[0] == filepath {
 			///Read contents of original file
 			file, err := projectTemplate.Open(path)
 			if err != nil {
@@ -170,7 +170,7 @@ func CopyFromTemplate(projectdir string, filepath string) tea.Msg {
 			///
 			///
 
-			err = os.WriteFile(projectdir+"/"+filepath, buff, 0664)
+			err = os.WriteFile(projectdir+"/"+filepath, buff, 0755)
 			if err != nil {
 				return fmt.Errorf("could not create new file %s", filepath)
 			}
