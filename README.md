@@ -19,7 +19,7 @@ The wizard helps setup with options for basic project structure and dependencies
 ### Project structure
 
 The project structure is defined in the `project-template/` directory.
-The TUI explains the use case for each directory
+The TUI has a descriptions for each directory
 
 ### Dependencies
 

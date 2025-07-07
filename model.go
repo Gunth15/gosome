@@ -38,6 +38,7 @@ func initModel(options []Option) Model {
 	}
 	return Model{
 		Checklist: CheckList{
+			title:    "Select your features",
 			options:  options,
 			selected: make([]bool, len(options)),
 			cursor:   0,

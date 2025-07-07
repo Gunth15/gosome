@@ -10,8 +10,8 @@ import (
 
 var (
 	CheckListStyle = lipgloss.NewStyle().AlignHorizontal(lipgloss.Left)
-	TitleStyle     = lipgloss.NewStyle().Bold(true).Underline(true)
-	SelectedStyle  = lipgloss.NewStyle().BorderStyle(lipgloss.RoundedBorder()).BorderLeft(true).BorderBackground(lipgloss.Color("#99907d"))
+	TitleStyle     = lipgloss.NewStyle().Bold(true).Underline(true).Foreground(lipgloss.Color("pink"))
+	SelectedStyle  = lipgloss.NewStyle().Background(lipgloss.Color("#b392ac"))
 )
 
 type CheckList struct {
@@ -70,7 +70,7 @@ func (m Model) viewCheckList() string {
 
 	var builder strings.Builder
 
-	builder.WriteString(TitleStyle.Width(m.Checklist.width).Render(m.Checklist.title))
+	builder.WriteString(TitleStyle.Render(m.Checklist.title))
 	builder.WriteByte('\n')
 
 	for i, selected := range m.Checklist.selected[start:end] {
@@ -81,7 +81,7 @@ func (m Model) viewCheckList() string {
 		var optbuilder strings.Builder
 		option := m.Checklist.options[cursor_pos]
 
-		optbuilder.WriteString(TitleStyle.Render(option.Title()))
+		optbuilder.WriteString(option.Title())
 		optbuilder.WriteByte('\n')
 		optbuilder.WriteString(option.Description())
 
@@ -93,7 +93,7 @@ func (m Model) viewCheckList() string {
 			element = element.Inherit(SelectedStyle)
 		}
 
-		builder.WriteString(element.Render(optbuilder.String()))
+		builder.WriteString(element.Border(lipgloss.ASCIIBorder(), true, true, true, true).Render(optbuilder.String()))
 		builder.WriteByte('\n')
 	}
 
