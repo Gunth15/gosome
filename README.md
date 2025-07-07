@@ -32,6 +32,11 @@ Optional dependencies include...
 
 I would also like to take time to appreciate [bubble tea](https://github.com/charmbracelet/bubbletea)
 
+## Customizations
+
+If compiling from source, you can edit the `project_template` file as you please and change to `config.json`
+to reflect the changes.
+
 ## Future possible additions
 
 If this gets enough traction, I plan on adding these features

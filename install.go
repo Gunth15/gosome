@@ -18,14 +18,12 @@ type (
 
 const (
 	Installing InstallState = iota
-	Error
 	Success
 )
 
 type Install struct {
 	// downloads 0=tools 1=pkg 2=templates
 	downloads []bool
-	attempt   string
 	spinner   spinner.Model
 	state     InstallState
 }
@@ -33,17 +31,21 @@ type Install struct {
 func (m Model) updateInstallation(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case ErrorMsg:
-		m.Install.state = Error
-		m.Install.attempt = msg.Error()
+		m.State = End
+		m.EndMsg = msg.Error()
 	case SuccessMsg:
-		m.Install.state = Success
-		m.Install.attempt = msg.string
+		m.State = End
+		m.EndMsg = msg.string
 	case PkgMsg:
 		m.Install.downloads[1] = true
+		m.done()
+
 	case ToolMsg:
 		m.Install.downloads[0] = true
+		m.done()
 	case TemplateMsg:
 		m.Install.downloads[2] = true
+		m.done()
 	}
 	var cmd tea.Cmd
 	m.Install.spinner, cmd = m.Install.spinner.Update(msg)
@@ -69,6 +71,17 @@ func (m Model) viewInstallation() string {
 	b.WriteString("📐 Applying templates:")
 	b.WriteString(statIndicator[2])
 
-	b.WriteString("\n\nAttempt: " + m.Install.attempt)
+	b.WriteString("\n\nPress q or ctrl+c to quit")
 	return b.String()
+}
+
+func (m Model) done() (tea.Model, tea.Msg) {
+	allDone := true
+	for _, done := range m.Install.downloads {
+		allDone = done && allDone
+		if !allDone {
+			return m, nil
+		}
+	}
+	return m, func() tea.Msg { return SuccessMsg{"Setup completed successfully. Happy building!"} }
 }

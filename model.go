@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -15,7 +16,9 @@ type State int
 
 const (
 	Select State = iota
+	Name
 	Installation
+	End
 )
 
 var (
@@ -24,8 +27,11 @@ var (
 )
 
 type Model struct {
+	cursor    int
 	Checklist CheckList
+	Inputs    []textinput.Model
 	Install   Install
+	EndMsg    string
 	State     State
 }
 
@@ -36,6 +42,20 @@ func initModel(options []Option) Model {
 	for i := range download {
 		download[i] = true
 	}
+
+	tboxes := make([]textinput.Model, 2)
+	for i := range tboxes {
+		tboxes[i] = textinput.New()
+		tboxes[i].Width = 50
+		switch i {
+		case 0:
+			tboxes[i].Focus()
+			tboxes[i].Placeholder = "Server"
+		case 1:
+			tboxes[i].Placeholder = "Web"
+		}
+	}
+
 	return Model{
 		Checklist: CheckList{
 			title:    "Select your features",
@@ -50,6 +70,9 @@ func initModel(options []Option) Model {
 			state:     Installing,
 			spinner:   s,
 		},
+		Inputs: tboxes,
+		cursor: 0,
+		State:  Name,
 	}
 }
 
@@ -69,10 +92,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Else handle state
 	switch m.State {
+	case Name:
+		return m.updateInputs(msg)
 	case Select:
 		return m.updateCheckList(msg)
 	case Installation:
 		return m.updateInstallation(msg)
+	case End:
+		return m.updateEndMsg(msg)
 	default:
 		return m, nil
 	}
@@ -80,36 +107,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	switch m.State {
+	case Name:
+		return m.viewInputs()
 	case Select:
 		return m.viewCheckList()
 	case Installation:
 		return m.viewInstallation()
+	case End:
+		return m.viewEndMsg()
 	default:
 		return "Invalid state"
 	}
 }
 
 func (m Model) StartInstall() (tea.Model, tea.Cmd) {
-	dir := "testing"
-	module := "testing"
+	module := m.Inputs[0].Value()
+	dir := m.Inputs[1].Value()
 
 	cmds := make([]tea.Cmd, 0)
 
 	// create new project directory and go mod
 	err := os.Mkdir(dir, 0755)
 	if err != nil {
-		m.Install.state = Error
 		return m, func() tea.Msg {
 			return ErrorMsg{fmt.Errorf("could not create project directory %s, may already exist", dir)}
 		}
 	}
 
-	// TODO: Update this to take a project name
 	init := exec.Command("go", "mod", "init", module)
 	init.Dir = dir
 	err = init.Run()
 	if err != nil {
-		m.Install.state = Error
 		return m, func() tea.Msg { return ErrorMsg{fmt.Errorf("could not initialize go module %s", module)} }
 	}
 
