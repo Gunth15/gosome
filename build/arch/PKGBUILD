@@ -1,0 +1,30 @@
+pkgname=gosome
+pkgver=0.0.1
+pkgrel=1
+pkgdesc='Tool to setup go web applications'
+arch=('x86_64')
+url="https://github.com/Gunth15/$pkgname"
+license=('GPL')
+makedepends=('go')
+source=("$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
+sha256sums=('131bd94e62f01fc3b28196bc31a8557f14a2b2f4b2f9376ad196f342dd64169d')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  mkdir -p build/
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  export CGO_CPPFLAGS="${CPPFLAGS}"
+  export CGO_CFLAGS="${CFLAGS}"
+  export CGO_CXXFLAGS="${CXXFLAGS}"
+  export CGO_LDFLAGS="${LDFLAGS}"
+  export GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+  go build -o build .
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 build/$pkgname "$pkgdir"/usr/bin/$pkgname
+}
