@@ -45,7 +45,9 @@ func (m Model) updateInstallation(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case TemplateMsg:
 		m.Install.downloads[2] = true
 	}
-	return m, nil
+	var cmd tea.Cmd
+	m.Install.spinner, cmd = m.Install.spinner.Update(msg)
+	return m, cmd
 }
 
 func (m Model) viewInstallation() string {
@@ -54,17 +56,17 @@ func (m Model) viewInstallation() string {
 	statIndicator := make([]string, 3)
 	for i, finished := range m.Install.downloads {
 		if finished {
-			statIndicator[i] = "✅\n"
+			statIndicator[i] = " ✅\n"
 		} else {
-			statIndicator[i] = m.Install.spinner.View() + "\n"
+			statIndicator[i] = " " + m.Install.spinner.View() + "\n"
 		}
 	}
 
-	b.WriteString("🛠 Installing tools")
+	b.WriteString("🛠 Installing tools: ")
 	b.WriteString(statIndicator[0])
-	b.WriteString("\n📦 Installing packages:\n")
+	b.WriteString("📦 Installing packages:")
 	b.WriteString(statIndicator[1])
-	b.WriteString("\n📐 Applying templates:\n")
+	b.WriteString("📐 Applying templates:")
 	b.WriteString(statIndicator[2])
 
 	b.WriteString("\n\nAttempt: " + m.Install.attempt)

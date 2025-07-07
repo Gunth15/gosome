@@ -70,7 +70,7 @@ func (m Model) viewCheckList() string {
 
 	var builder strings.Builder
 
-	builder.WriteString(TitleStyle.Render(m.Checklist.title))
+	builder.WriteString(TitleStyle.Width(m.Checklist.width).Render(m.Checklist.title))
 	builder.WriteByte('\n')
 
 	for i, selected := range m.Checklist.selected[start:end] {

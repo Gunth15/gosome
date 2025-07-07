@@ -17,7 +17,7 @@
     {
       "opt-name": "middlware",
       "desc": "basic middleware library to get you started",
-      "file": "./internal/middlware",
+      "file": "./internal/middleware",
       "deps": {
         "packages": [],
         "tools": []

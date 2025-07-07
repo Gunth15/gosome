@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -29,6 +30,12 @@ type Model struct {
 }
 
 func initModel(options []Option) Model {
+	s := spinner.New()
+	s.Spinner = spinner.Line
+	download := make([]bool, 3)
+	for i := range download {
+		download[i] = true
+	}
 	return Model{
 		Checklist: CheckList{
 			options:  options,
@@ -38,8 +45,9 @@ func initModel(options []Option) Model {
 			height:   1,
 		},
 		Install: Install{
-			downloads: make([]bool, 3),
+			downloads: download,
 			state:     Installing,
+			spinner:   s,
 		},
 	}
 }
@@ -107,6 +115,10 @@ func (m Model) StartInstall() (tea.Model, tea.Cmd) {
 	pkgs := make([]string, 0)
 	tools := make([]string, 0)
 	files := make([]string, 0)
+
+	m.Install.downloads[2] = false
+	files = append(files, "README.md", "internal/api", "cmd", "sqlc.yaml", "env")
+
 	for i, selected := range m.Checklist.selected {
 		if selected {
 			// packages, and tool dependencies are downloaded and the realted template is copied to the new project
@@ -120,17 +132,25 @@ func (m Model) StartInstall() (tea.Model, tea.Cmd) {
 	}
 
 	cmds = append(cmds, m.Install.spinner.Tick)
-	cmds = append(cmds, func() tea.Msg { return DownloadPkgs(dir, pkgs...) })
-	cmds = append(cmds, func() tea.Msg { return DownloadTools(dir, tools...) })
-	cmds = append(cmds, func() tea.Msg { return CopyFromTemplate(dir, files...) })
+	if len(pkgs) != 0 {
+		m.Install.downloads[1] = false
+		cmds = append(cmds, func() tea.Msg { return DownloadPkgs(dir, pkgs...) })
+	}
+	if len(tools) != 0 {
+		m.Install.downloads[0] = false
+		cmds = append(cmds, func() tea.Msg { return DownloadTools(dir, tools...) })
+	}
+	if len(files) != 0 {
+		cmds = append(cmds, func() tea.Msg { return CopyFromTemplate(dir, files...) })
+	}
 
 	return m, tea.Batch(cmds...)
 }
 
 // DownloadPkgs downlads dependencies
-func DownloadPkgs(project_dir string, deps ...string) tea.Msg {
+func DownloadPkgs(projectDir string, deps ...string) tea.Msg {
 	cmd := exec.Command("go", append([]string{"get"}, deps...)...)
-	cmd.Dir = project_dir
+	cmd.Dir = projectDir
 	err := cmd.Run()
 	if err != nil {
 		return ErrorMsg{fmt.Errorf("could not install all packages %s", err)}
@@ -152,7 +172,7 @@ func DownloadTools(projectDir string, deps ...string) tea.Msg {
 func CopyFromTemplate(projectDir string, filepaths ...string) tea.Msg {
 	for _, filepath := range filepaths {
 
-		info, err := fs.Stat(ProjectTemplate, filepath)
+		info, err := fs.Stat(ProjectTemplate, getTemplatePath(filepath))
 		if err != nil {
 			return ErrorMsg{err}
 		}
@@ -164,7 +184,7 @@ func CopyFromTemplate(projectDir string, filepaths ...string) tea.Msg {
 			}
 		} else {
 			if err = copyToProject(projectDir, filepath); err != nil {
-				return err
+				return ErrorMsg{err}
 			}
 		}
 	}
@@ -172,14 +192,14 @@ func CopyFromTemplate(projectDir string, filepaths ...string) tea.Msg {
 }
 
 func copydirectory(projectDir string, filepath string) error {
-	err := os.Mkdir(projectDir+filepath, 0755)
+	err := os.MkdirAll(projectDir+"/"+filepath, 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot create directory %s in new project %s", filepath, projectDir)
 	}
 
-	dirs, err := ProjectTemplate.ReadDir(filepath)
+	dirs, err := ProjectTemplate.ReadDir(getTemplatePath(filepath))
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot find file %s in project template directory", filepath)
 	}
 
 	for _, entry := range dirs {
@@ -199,15 +219,22 @@ func copydirectory(projectDir string, filepath string) error {
 }
 
 func copyToProject(projectDir string, projectPath string) error {
-	buff, err := ProjectTemplate.ReadFile(projectPath)
+	buff, err := ProjectTemplate.ReadFile(getTemplatePath(projectPath))
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot find file %s in project template directory: %s", projectPath, err)
 	}
 
 	path := fmt.Sprintf("%s/%s", projectDir, projectPath)
 	if err = os.WriteFile(path, buff, 0755); err != nil {
-		return err
+		return fmt.Errorf("cannot write file to %s: %s", path, err)
 	}
 
 	return nil
+}
+
+func getTemplatePath(filePath string) string {
+	if filePath[0:2] == "./" {
+		filePath = filePath[2:]
+	}
+	return "project_template/" + filePath
 }

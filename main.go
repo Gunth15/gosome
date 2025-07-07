@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-//go:embed project_template
+//go:embed  project_template/* project_template/**/*
 var ProjectTemplate embed.FS
 
 //go:embed config.json
@@ -20,6 +20,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Invalid configuration: %s", err))
 	}
+
 	p := tea.NewProgram(initModel(conf.Options))
 	if _, err := p.Run(); err != nil {
 		panic("FUCK")
