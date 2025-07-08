@@ -188,11 +188,13 @@ func DownloadPkgs(projectDir string, deps ...string) tea.Msg {
 }
 
 func DownloadTools(projectDir string, deps ...string) tea.Msg {
-	cmd := exec.Command("go", append([]string{"get", "--tool"}, deps...)...)
-	cmd.Dir = projectDir
-	err := cmd.Run()
-	if err != nil {
-		return ErrorMsg{fmt.Errorf("could not install tool %s", err)}
+	for _, tool := range deps {
+		cmd := exec.Command("go", "get", "--tool", tool)
+		cmd.Dir = projectDir
+		err := cmd.Run()
+		if err != nil {
+			return ErrorMsg{fmt.Errorf("could not install tool %s", err)}
+		}
 	}
 	return ToolMsg{fmt.Sprintf("Tools installed: %s", deps)}
 }
