@@ -3,7 +3,7 @@ sql:
   #default engine is sqlite, but you can change it to whatever you like
   - engine: "sqlite"
     queries: "./internal/db/queries/*"
-    schema: "./internal/db/schemas/*"
+    schema: "./internal/db/migrations"
     gen:
       go:
         package: db
