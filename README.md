@@ -42,6 +42,6 @@ to reflect the changes.
 If this gets enough traction, I plan on adding these features
 
 - Tailwind
-- eslint
+- esbuild?
 - HTMX
 - plugins?
