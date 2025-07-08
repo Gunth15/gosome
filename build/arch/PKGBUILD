@@ -1,5 +1,5 @@
 pkgname=gosome
-pkgver=0.0.1
+pkgver=0.0.13
 pkgrel=1
 pkgdesc='Tool to setup go web applications'
 arch=('x86_64')
@@ -7,7 +7,7 @@ url="https://github.com/Gunth15/$pkgname"
 license=('GPL')
 makedepends=('go')
 source=("$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('aacbc23e011b205051abf5d4c02131c66e3939f3945844c5cf9d415ab1b133f7')
+sha256sums=('dd155a7e1b95e406bfec10d62e54d073d82c692c3815d0e4e593c47fafb0087f')
 
 prepare() {
   cd "$pkgname-$pkgver"
