@@ -7,7 +7,7 @@ url="https://github.com/Gunth15/$pkgname"
 license=('GPL')
 makedepends=('go')
 source=("$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('131bd94e62f01fc3b28196bc31a8557f14a2b2f4b2f9376ad196f342dd64169d')
+sha256sums=('aacbc23e011b205051abf5d4c02131c66e3939f3945844c5cf9d415ab1b133f7')
 
 prepare() {
   cd "$pkgname-$pkgver"
