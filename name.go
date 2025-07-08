@@ -41,9 +41,7 @@ func (m Model) updateInputs(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Inputs[i].Blur()
 	}
 	for i, input := range m.Inputs {
-		var cmd tea.Cmd
-		m.Inputs[i], cmd = input.Update(msg)
-		cmds = append(cmds, cmd)
+		m.Inputs[i], cmds[i] = input.Update(msg)
 	}
 	return m, tea.Batch(cmds...)
 }
